@@ -186,25 +186,27 @@ void switchToDifferentScreen() {
 }
 
 void updateScreenData() {
-  // Update the displayed data on the screen
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_WHITE);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString("New Screen", 160, 60); // Display some text on the new screen
-  
-  // Draw green rectangle
-  tft.fillRoundRect(60, 100, 100, 50, 10, TFT_GREEN);
+  // Chỉ cập nhật những vùng bị thay đổi
+  int x1 = 60, y1 = 100, w1 = 100, h1 = 50; // Vùng màu xanh lá cây
+  int x2 = 180, y2 = 100, w2 = 100, h2 = 50; // Vùng màu đỏ
+
+  // Xóa vùng cũ
+  tft.fillRect(x1, y1, w1, h1, TFT_BLACK);
+  tft.fillRect(x2, y2, w2, h2, TFT_BLACK);
+
+  // Vẽ vùng màu xanh lá cây
+  tft.fillRoundRect(x1, y1, w1, h1, 10, TFT_GREEN);
   tft.setTextColor(TFT_BLACK);
   tft.setTextSize(1);
-  tft.drawString(String(listdata[1].mq_data), 110, 125);
+  tft.drawString(String(listdata[1].mq_data), x1 + w1 / 2, y1 + h1 / 2);
 
-  // Draw red rectangle
-  tft.fillRoundRect(180, 100, 100, 50, 10, TFT_RED);
+  // Vẽ vùng màu đỏ
+  tft.fillRoundRect(x2, y2, w2, h2, 10, TFT_RED);
   tft.setTextColor(TFT_WHITE); 
   tft.setTextSize(1);
-  tft.drawString(String(listdata[1].fl_data), 230, 125);
-  
-  drawButton(); // Draw the back button
+  tft.drawString(String(listdata[1].fl_data), x2 + w2 / 2, y2 + h2 / 2);
+
+  drawButton(); // Vẽ lại nút back nếu cần thiết
 }
 
 void handleTouch(int x, int y) {
@@ -241,28 +243,29 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
 }
 
 void loop() {
-  // No longer simulating alert data
   unsigned long currentTime = millis();
   
-  // Update screen data if new data is received
+  // Cập nhật dữ liệu màn hình nếu có dữ liệu mới
   if (!isGridDisplayed && newDataReceived) {
     listdata[myData.seq - 1] = myData;
     updateScreenData();
     newDataReceived = false;
   }
 
-  // Touch handling
+  // Xử lý chạm màn hình
   if (ts.tirqTouched() && ts.touched()) {
     TS_Point p = ts.getPoint();
     long x_map = map(p.x, 200, 3800, 0, 320);
     long y_map = map(p.y, 200, 3800, 0, 240);
 
-    // Only process the touch if debounce delay has passed
+    // Chỉ xử lý chạm nếu độ trễ debounce đã qua
     if (currentTime - lastTouchTime > debounceDelay) {
       handleTouch(x_map, y_map);
-      lastTouchTime = currentTime; // Update the last touch time
+      lastTouchTime = currentTime; // Cập nhật thời gian chạm cuối cùng
     }
-  
-    delay(100);
+
+    delay(100); // Độ trễ nhỏ để tránh giật màn hình
   }
+
+  delay(10); // Độ trễ nhỏ trong vòng lặp chính để tránh giật màn hình
 }
