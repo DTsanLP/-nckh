@@ -103,7 +103,7 @@ void setup() {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
-  esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+  esp_now_register_recv_cb(OnDataRecv);
 
   // Start the SPI for the touch screen and init the TS library
   mySpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
