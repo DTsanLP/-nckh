@@ -16,31 +16,28 @@
 // per the Github Instructions. The pins are defined in there.
 
 // ----------------------------
-// Standard Libraries 000000000000000000000
+// Standard Libraries
 // ----------------------------
 #include <esp_now.h>
 #include <WiFi.h>
-
 #include <SPI.h>
 
 // ----------------------------
 // Additional Libraries - each one of these will need to be installed.
 // ----------------------------
-
 #include <XPT2046_Touchscreen.h>
 // A library for interfacing with the touch screen
 //
 // Can be installed from the library manager (Search for "XPT2046")
-//https://github.com/PaulStoffregen/XPT2046_Touchscreen
+// https://github.com/PaulStoffregen/XPT2046_Touchscreen
 
 #include <TFT_eSPI.h>
 // A library for interfacing with LCD displays
 //
 // Can be installed from the library manager (Search for "TFT_eSPI")
-//https://github.com/Bodmer/TFT_eSPI
+// https://github.com/Bodmer/TFT_eSPI
 
-
-//MESSAGE
+// MESSAGE
 typedef struct struct_message {
   char a[32];
   int seq;
@@ -51,13 +48,16 @@ typedef struct struct_message {
 // Create a struct_message called myData
 struct_message myData;
 struct_message listdata[10];
+
+// Flag to track new data
+bool newDataReceived = false;
+
 // ----------------------------
 // Touch Screen pins
 // ----------------------------
 
 // The CYD touch uses some non-default
 // SPI pins
-
 #define XPT2046_IRQ 36
 #define XPT2046_MOSI 32
 #define XPT2046_MISO 39
@@ -164,11 +164,6 @@ void updateCell(int row, int col, uint16_t color) {
 }
 
 void switchToDifferentScreen() {
-  if (myData.seq == 1)
-    listdata[0] = myData;
-  if (myData.seq == 2)
-    listdata[1] = myData;
-
   tft.fillScreen(TFT_BLACK); // Clear the screen
   tft.setTextColor(TFT_WHITE);
   tft.setTextDatum(MC_DATUM);
@@ -188,6 +183,28 @@ void switchToDifferentScreen() {
   
   drawButton(); // Draw the back button
   isGridDisplayed = false;
+}
+
+void updateScreenData() {
+  // Update the displayed data on the screen
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("New Screen", 160, 60); // Display some text on the new screen
+  
+  // Draw green rectangle
+  tft.fillRoundRect(60, 100, 100, 50, 10, TFT_GREEN);
+  tft.setTextColor(TFT_BLACK);
+  tft.setTextSize(1);
+  tft.drawString(String(listdata[1].mq_data), 110, 125);
+
+  // Draw red rectangle
+  tft.fillRoundRect(180, 100, 100, 50, 10, TFT_RED);
+  tft.setTextColor(TFT_WHITE); 
+  tft.setTextSize(1);
+  tft.drawString(String(listdata[1].fl_data), 230, 125);
+  
+  drawButton(); // Draw the back button
 }
 
 void handleTouch(int x, int y) {
@@ -218,12 +235,21 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   Serial.print("Flame: ");
   Serial.println(myData.fl_data);
   Serial.println("-------");
+
+  // Set new data flag
+  newDataReceived = true;
 }
 
 void loop() {
   // No longer simulating alert data
   unsigned long currentTime = millis();
   
+  // Update screen data if new data is received
+  if (!isGridDisplayed && newDataReceived) {
+    listdata[myData.seq - 1] = myData;
+    updateScreenData();
+    newDataReceived = false;
+  }
 
   // Touch handling
   if (ts.tirqTouched() && ts.touched()) {
