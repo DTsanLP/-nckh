@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "ui_helpers.h": "c"
-    }
+        "ui_helpers.h": "c",
+        "roombutton.h": "c"
+    },
+    "accessibility.signalOptions.volume": 100
 }

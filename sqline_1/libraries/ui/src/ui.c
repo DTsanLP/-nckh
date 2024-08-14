@@ -5,7 +5,7 @@
 
 #include "ui.h"
 #include "ui_helpers.h"
-
+#include "RoomButton.h"
 ///////////////////// VARIABLES ////////////////////
 
 // SCREEN: ui_Home
@@ -17,46 +17,27 @@ lv_obj_t *ui_GroupScroll;
 void button_event_handler(lv_event_t *e);
 void create_room_button(lv_obj_t *parent, int room_number, int x, int y);
 // void ui_event_Btn101(lv_event_t * e);
+
+RoomButton *roomButtons;
+
+int roomButtonCount = 0;
+
+void add_room_button(lv_obj_t *btn, int id, lv_obj_t *label);
+
 lv_obj_t *ui_Btn101;
 lv_obj_t *ui_Lb101;
-// lv_obj_t * ui_Btn102;
-// lv_obj_t * ui_Lb102;
-// lv_obj_t * ui_Btn103;
-// lv_obj_t * ui_Lb103;
-// lv_obj_t * ui_Btn104;
-// lv_obj_t * ui_Lb104;
-// lv_obj_t * ui_Btn105;
-// lv_obj_t * ui_Lb105;
-// lv_obj_t * ui_Btn106;
-// lv_obj_t * ui_Lb106;
-// lv_obj_t * ui_Btn201;
-// lv_obj_t * ui_Lb201;
-// lv_obj_t * ui_Btn202;
-// lv_obj_t * ui_Lb202;
-// lv_obj_t * ui_Btn203;
-// lv_obj_t * ui_Lb203;
-// lv_obj_t * ui_Btn204;
-// lv_obj_t * ui_Lb204;
-// lv_obj_t * ui_Btn301;
-// lv_obj_t * ui_Lb301;
-// lv_obj_t * ui_Btn302;
-// lv_obj_t * ui_Lb302;
-// lv_obj_t * ui_Btn303;
-// lv_obj_t * ui_Lb303;
-// lv_obj_t * ui_Btn304;
-// lv_obj_t * ui_Lb304;
-// lv_obj_t * ui_Btn401;
-// lv_obj_t * ui_Lb401;
+bool clicked;
+
 lv_obj_t *ui_PanelTemp;
 void ui_event_BtnAdd(lv_event_t *e);
 lv_obj_t *ui_BtnAdd;
 lv_obj_t *ui_LbAdd;
 lv_obj_t *ui_TextAreaHome;
 void ui_event_KeyboardHome(lv_event_t *e);
-char ui_event_TextArea(lv_event_t *e);
+char *ui_event_TextArea(lv_event_t *e);
 lv_obj_t *ui_KeyboardHome;
 lv_obj_t *ui_LbSOS;
-
+bool SOSclicked;
 // SCREEN: ui_Room
 void ui_Room_screen_init(void);
 lv_obj_t *ui_Room;
@@ -96,6 +77,17 @@ lv_obj_t *ui____initial_actions0;
 ///////////////////// ANIMATIONS ////////////////////
 
 ///////////////////// FUNCTIONS ////////////////////
+void add_room_button(lv_obj_t *btn, int id, lv_obj_t *label)
+{
+    // Tăng kích thước mảng lên 1
+    roomButtonCount++;
+    roomButtons = (RoomButton *)realloc(roomButtons, roomButtonCount * sizeof(RoomButton));
+
+    // Lưu đối tượng nút và ID vào mảng
+    roomButtons[roomButtonCount - 1].btn = btn;
+    roomButtons[roomButtonCount - 1].id = id;
+    roomButtons[roomButtonCount - 1].label = label;
+}
 
 void button_event_handler(lv_event_t *e)
 {
@@ -112,6 +104,7 @@ void button_event_handler(lv_event_t *e)
         lv_obj_t *label = lv_obj_get_child(obj, 0); // Lấy phần tử con đầu tiên (label)
         char *text = lv_label_get_text(label);      // Lấy nội dung text của label
         lv_label_set_text(ui_LbRoom, text);
+        clicked = true;
     }
 }
 void create_room_button(lv_obj_t *parent, int room_number, int x, int y)
@@ -135,10 +128,9 @@ void create_room_button(lv_obj_t *parent, int room_number, int x, int y)
     lv_obj_set_height(label, LV_SIZE_CONTENT); // 1
     lv_obj_set_align(label, LV_ALIGN_CENTER);
 
-    // Chuyển đổi số phòng thành chuỗi và đặt làm text của label
-    char room_str[10];
-    snprintf(room_str, sizeof(room_str), "%d", room_number);
-    lv_label_set_text(label, room_str);
+    lv_label_set_text_fmt(label, "%d", room_number);
+
+    add_room_button(btn, room_number, label);
 
     lv_obj_add_event_cb(btn, button_event_handler, LV_EVENT_CLICKED, NULL);
 }
@@ -153,6 +145,7 @@ void ui_event_BtnAdd(lv_event_t *e)
         _ui_flag_modify(ui_TextAreaHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
         _ui_flag_modify(ui_BtnAdd, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
         _ui_flag_modify(ui_PanelTemp, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
+        _ui_flag_modify(ui_LbSOS, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
     }
 }
 void ui_event_KeyboardHome(lv_event_t *e)
@@ -164,23 +157,35 @@ void ui_event_KeyboardHome(lv_event_t *e)
         _ui_flag_modify(ui_TextAreaHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
         _ui_flag_modify(ui_BtnAdd, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
         _ui_flag_modify(ui_KeyboardHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
-        createRoom(e);
+
         _ui_flag_modify(ui_PanelTemp, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
+        _ui_flag_modify(ui_LbSOS, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
+        lv_label_set_text(ui_LbName, ui_event_TextArea);
+        // const char *text = lv_textarea_get_text(ui_event_TextArea);
+        int number_room = atoi(ui_event_TextArea);
+        int row = number_room / 100;
+        int col = number_room % 100;
+
+        if (row > 0 && row < 7 && col < 9 && col > 0)
+        {
+            create_room_button(ui_GroupScroll, number_room, -280 + (col - 1) * 80, -165 + (row - 1) * 60);
+        }
+        else
+        {
+            lv_textarea_set_text(ui_TextAreaHome, "");
+        }
     }
 }
-char ui_event_TextArea(lv_event_t *e)
+
+char *ui_event_TextArea(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *obj = lv_event_get_target(e);
     if (code == LV_EVENT_VALUE_CHANGED)
     {
-        const char * text = lv_textarea_get_text(obj);
+        const char *text = lv_textarea_get_text(obj);
         return text;
-        // Tìm label liên quan và cập nhật nội dung của nó
-        // lv_obj_t * label = (lv_obj_t *)lv_event_get_user_data(e);
-        // lv_label_set_text(label, text);
     }
-
 }
 void ui_event_BtnBack(lv_event_t *e)
 {
@@ -189,6 +194,7 @@ void ui_event_BtnBack(lv_event_t *e)
     if (event_code == LV_EVENT_CLICKED)
     {
         lv_disp_load_scr(ui_Home);
+        clicked = false;
     }
 }
 void ui_event_ArcHumi(lv_event_t *e)
@@ -216,7 +222,7 @@ void ui_event_BtnSafe(lv_event_t *e)
     lv_obj_t *target = lv_event_get_target(e);
     if (event_code == LV_EVENT_CLICKED)
     {
-        turnOffSOS(e);
+        SOSclicked = true;
     }
 }
 

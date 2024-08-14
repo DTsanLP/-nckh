@@ -13,14 +13,23 @@ uint8_t broadcastAddress[] = {0xD0, 0xEF, 0x76, 0x57, 0xF2, 0x50};
 
 typedef struct struct_message {
   // char a[32];
-  int seq;
-  int mq_data;
+  unsigned int seq;
+  unsigned int mq_data;
   bool fl_data;
   float temp_data;
-  float humi_data;
+  uint8_t humi_data;
 } struct_message;
 
 struct_message myData;
+
+typedef struct control_message {
+  unsigned int seq;
+  bool buz_ctrl;
+  bool dcm_ctrl;
+} control_message;
+
+control_message ctrlData;
+
 esp_now_peer_info_t peerInfo;
 
 const int MQ = 36;
@@ -31,10 +40,23 @@ const int buzz = 17;
 bool buz_value = false;
 bool dcm_value = false;
 bool fl_value;
-int mq_value;
+unsigned int mq_value;
 float temp_value;
-float humi_value;
+uint8_t humi_value;
 
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+    memcpy(&ctrlData, incomingData, sizeof(ctrlData));
+    Serial.print("Bytes received: ");
+    Serial.println(len);
+    Serial.print("Info: ");
+    Serial.println(ctrlData.seq);
+    Serial.print("BUZZ: ");
+    Serial.println(ctrlData.buz_ctrl);
+    Serial.print("DCM: ");
+    Serial.println(ctrlData.dcm_ctrl);
+    Serial.println("-------");
+}
 void setup() {
   // lcd.init();
   // lcd.backlight();
@@ -45,11 +67,14 @@ void setup() {
   pinMode(buzz, OUTPUT);
 
   Serial.begin(115200);
-  WiFi.mode(WIFI_STA);  
+
+  WiFi.mode(WIFI_STA);
+
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
+
   esp_now_register_send_cb(OnDataSent);
   memcpy(peerInfo.peer_addr, broadcastAddress, 6);
   peerInfo.channel = 0;  
@@ -59,6 +84,8 @@ void setup() {
     Serial.println("Failed to add peer");
     return;
   }
+
+  esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
 }
 
 void loop() {
@@ -88,21 +115,21 @@ void readSensorShow()
   humi_value = dht.readHumidity();
   temp_value = dht.readTemperature();
 
-  Serial.print("FL: ");
-  Serial.println(fl_value);
-  Serial.print("MQ: " );
-  Serial.println(mq_value);
-  Serial.print("Temp: ");
-  Serial.println(temp_value);
-  Serial.print("Humi: " );
-  Serial.println(humi_value);
-
-  if (fl_value == 0 || mq_value >= 500)
+  // Serial.print("FL: ");
+  // Serial.println(fl_value);
+  // Serial.print("MQ: " );
+  // Serial.println(mq_value);
+  // Serial.print("Temp: ");
+  // Serial.println(temp_value);
+  // Serial.print("Humi: " );
+  // Serial.println(humi_value);
+  Serial.println("-------");
+  if (fl_value == 0 || mq_value >= 1000 || temp_value >= 45)
   {
     dcm_value = true;
     buz_value = true;
   }
-  else
+  if (ctrlData.buz_ctrl == false)
   {
     dcm_value = false;
     buz_value = false;

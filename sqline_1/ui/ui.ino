@@ -3,8 +3,13 @@
 #include <ui.h>
 #include <XPT2046_Touchscreen.h>
 
+// DC MAC D1 R32: {0x08, 0xD1, 0xF9, 0x35, 0x1F, 0xB0};
 #include <esp_now.h>
 #include <WiFi.h>
+#include <vector>
+#define BUZ_PIN 27
+
+uint8_t broadcastAddress[] = {0x08, 0xD1, 0xF9, 0x35, 0x1F, 0xB0};
 /*Don't forget to set Sketchbook location in File/Preferences to the path of your UI project (the parent foder of this INO file)*/
 // Touch Screen pins
 // ----------------------------
@@ -31,14 +36,24 @@ static lv_color_t buf[screenWidth * screenHeight / 10];
 // MESSAGE
 typedef struct struct_message
 {
-    // char a[32];
-    int seq;
+    unsigned int seq;
     int mq_data;
     bool fl_data;
     float temp_data;
-    float humi_data;
+    uint8_t humi_data;
 } struct_message;
-struct_message myData;
+static struct_message myData;
+static std::vector<struct_message> boardsStruct;
+// struct_message boardsStruct[48];
+typedef struct control_message
+{
+    unsigned int seq;
+    bool buz_ctrl;
+    bool dcm_ctrl;
+} control_message;
+static control_message ctrlData;
+
+esp_now_peer_info_t peerInfo;
 
 TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight); /* TFT instance */
 
@@ -99,24 +114,38 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
     memcpy(&myData, incomingData, sizeof(myData));
-    Serial.print("Bytes received: ");
-    Serial.println(len);
-    Serial.print("Info: ");
-    Serial.println(myData.seq);
-    Serial.print("MQ: ");
-    Serial.println(myData.mq_data);
-    Serial.print("Flame: ");
-    Serial.println(myData.fl_data);
-    Serial.print("Temperature: ");
-    Serial.println(myData.temp_data);
-    Serial.print("Humidity: ");
-    Serial.println(myData.humi_data);
-    Serial.println("-------");
+
+    bool boardFound = false;
+    for (auto &board : boardsStruct)
+    {
+        if (board.seq == myData.seq)
+        {
+            board.temp_data = myData.temp_data;
+            board.humi_data = myData.humi_data;
+            board.mq_data = myData.mq_data;
+            board.fl_data = myData.fl_data;
+            boardFound = true;
+            break;
+        }
+    }
+
+    // Nếu không tìm thấy board trong vector, thêm mới
+    if (!boardFound)
+    {
+        boardsStruct.push_back(myData);
+    }
 }
+
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+    Serial.print("\r\nLast Packet Send Status:\t");
+    Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+
 void setup()
 {
     Serial.begin(115200); /* prepare for possible serial debug */
-
+    pinMode(BUZ_PIN, OUTPUT);
     WiFi.mode(WIFI_STA);
 
     if (esp_now_init() != ESP_OK)
@@ -125,7 +154,15 @@ void setup()
         return;
     }
     esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
-
+    esp_now_register_send_cb(OnDataSent);
+    memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+    if (esp_now_add_peer(&peerInfo) != ESP_OK)
+    {
+        Serial.println("Failed to add peer");
+        return;
+    }
     String LVGL_Arduino = "Hello Arduino! ";
     LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
 
@@ -167,6 +204,7 @@ void setup()
     ui_init();
 
     Serial.println("Setup done");
+    digitalWrite(BUZ_PIN, HIGH);
 }
 
 void loop()
@@ -178,54 +216,134 @@ void loop()
 
 void reload_Value()
 {
-    lv_obj_set_style_bg_color(ui_Btn101, myData.fl_data == 0 || myData.mq_data >= 500 /*|| myData.temp_data >= 40 */ ? lv_color_hex(0x210000) : lv_color_hex(0x217C69), LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    lv_color_t current_bg_color = lv_obj_get_style_bg_color(ui_Btn101, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    if (current_bg_color.full == lv_color_hex(0x210000).full)
+    for (auto &board : boardsStruct)
     {
-        lv_obj_clear_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
-        // lv_label_set_text(ui_LbSOS, "SOS ROOM:");
+        if (board.seq == 101)
+        {
+            lv_obj_set_style_bg_color(ui_Btn101, board.fl_data == 0 || board.mq_data >= 1000 || board.temp_data >= 40 ? lv_color_hex(0x210000) : lv_color_hex(0x217C69), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_color_t current_bg_color = lv_obj_get_style_bg_color(ui_Btn101, LV_PART_MAIN | LV_STATE_DEFAULT);
+            if (current_bg_color.full == lv_color_hex(0x210000).full)
+            {
+                lv_obj_clear_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(ui_BtnSafe, LV_OBJ_FLAG_HIDDEN);
+                char *text = lv_label_get_text(ui_Lb101);
+                lv_label_set_text(ui_LbSOS, text);
+                digitalWrite(BUZ_PIN, LOW);
+            }
+            else
+            {
+                // lv_obj_add_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
+                // digitalWrite(BUZ_PIN, HIGH);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < roomButtonCount; i++)
+            {
+                if (board.seq == roomButtons[i].id)
+                {
+                    lv_obj_set_style_bg_color(roomButtons[i].btn, board.fl_data == 0 || board.mq_data >= 1000 || board.temp_data >= 40 ? lv_color_hex(0x210000) : lv_color_hex(0x217C69), LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_color_t current_bg_color = lv_obj_get_style_bg_color(roomButtons[i].btn, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    if (current_bg_color.full == lv_color_hex(0x210000).full)
+                    {
+                        lv_obj_clear_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(ui_BtnSafe, LV_OBJ_FLAG_HIDDEN);
+                        char *text = lv_label_get_text(roomButtons[i].label);
+                        lv_label_set_text(ui_LbSOS, text);
+                        digitalWrite(BUZ_PIN, LOW);
+                    }
+                    else
+                    {
+                        // lv_obj_add_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
+                        
+                    }
+                }
+            }
+        }
+        Serial.println(clicked);
+        Serial.println(lv_label_get_text(ui_LbRoom));
+        Serial.println("------");
     }
-    else
-    {
-        lv_obj_add_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
-    }
-
     /// Show
-    char buffer[5];
-    sprintf(buffer, "%04d", myData.mq_data);
-    lv_label_set_text(ui_ValSmoke, buffer);
-    lv_label_set_text(ui_ValFire, myData.fl_data == 0 ? "YES" : "NO");
-    lv_arc_set_value(ui_ArcTemp, myData.temp_data);
-    lv_arc_set_value(ui_ArcHumi, myData.humi_data);
-
-    char humi_data_str[6];
-    dtostrf(myData.humi_data, 3, 1, humi_data_str);
-    lv_label_set_text(ui_ValHumi, humi_data_str);
-    char temp_data_str[6];
-    dtostrf(myData.temp_data, 4, 1, temp_data_str);
-    lv_label_set_text(ui_ValTemp, temp_data_str);
-
-    /// Conditions
-    if (myData.mq_data >= 500)
+    if (clicked == true)
     {
-        lv_obj_clear_flag(ui_ImgSmoke, LV_OBJ_FLAG_HIDDEN);
+        char *text_room = lv_label_get_text(ui_LbRoom);
+        unsigned int check_room = atoi(text_room);
+        for (auto &board : boardsStruct)
+        {
+            if (check_room == board.seq)
+            {
+                lv_label_set_text_fmt(ui_ValSmoke, "%d", board.mq_data);
+                lv_label_set_text(ui_ValFire, board.fl_data == 0 ? "YES" : "NO");
+
+                lv_label_set_text_fmt(ui_ValHumi, "%d", board.humi_data);
+
+                // char humi_data_str[6];
+                // dtostrf(myData.humi_data, 3, 1, humi_data_str);
+                // lv_label_set_text(ui_ValHumi, humi_data_str);
+                char temp_data_str[6];
+                dtostrf(board.temp_data, 4, 1, temp_data_str);
+                lv_label_set_text(ui_ValTemp, temp_data_str);
+
+                lv_arc_set_value(ui_ArcTemp, board.temp_data);
+                lv_arc_set_value(ui_ArcHumi, board.humi_data);
+
+                /// Conditions
+                if (board.mq_data >= 1000)
+                {
+                    lv_obj_clear_flag(ui_ImgSmoke, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_clear_flag(ui_BtnSafe, LV_OBJ_FLAG_HIDDEN);
+                    lv_label_set_text(ui_LbSafe, text_room);
+                }
+                else
+                {
+                    lv_obj_add_flag(ui_ImgSmoke, LV_OBJ_FLAG_HIDDEN);
+                }
+
+                if (board.fl_data == 0 || board.temp_data >= 45)
+                {
+                    lv_obj_clear_flag(ui_ImgFire, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_clear_flag(ui_BtnSafe, LV_OBJ_FLAG_HIDDEN);
+                    lv_label_set_text(ui_LbSafe, text_room);
+                }
+                else
+                {
+                    lv_obj_add_flag(ui_ImgFire, LV_OBJ_FLAG_HIDDEN);
+                }
+                break;
+            }
+        }
+        if (SOSclicked == true)
+        {
+          
+            ctrlData.seq = check_room;
+            ctrlData.buz_ctrl = false;
+            ctrlData.dcm_ctrl = false;
+            digitalWrite(BUZ_PIN, HIGH);
+        }
+        else
+        {
+            ctrlData.seq = check_room;
+            ctrlData.buz_ctrl = true;
+            ctrlData.dcm_ctrl = true;
+        }
+    }
+
+    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&ctrlData, sizeof(ctrlData));
+    if (result == ESP_OK)
+    {
+        Serial.println(ctrlData.buz_ctrl);
+        if (ctrlData.buz_ctrl == false)
+        {
+            lv_obj_add_flag(ui_BtnSafe, LV_OBJ_FLAG_HIDDEN);
+            SOSclicked = false;
+            delay(200);
+        }
+        Serial.println("Sent with success");
     }
     else
     {
-        lv_obj_add_flag(ui_ImgSmoke, LV_OBJ_FLAG_HIDDEN);
+        Serial.println("Error sending the data");
     }
-
-    if (myData.fl_data == 0 /*|| myData.temp_data >= 40*/)
-    {
-        lv_obj_clear_flag(ui_ImgFire, LV_OBJ_FLAG_HIDDEN);
-    }
-    else
-    {
-        lv_obj_add_flag(ui_ImgFire, LV_OBJ_FLAG_HIDDEN);
-    }
-    // lv_obj_clear_flag(ui_BtnSafe, LV_OBJ_FLAG_HIDDEN);
-
     delay(100);
 }

@@ -4,32 +4,10 @@
 // Project name: sqline_1
 
 #include "ui.h"
-
-void changeRoom(lv_event_t * e)
+void changeRoom(lv_event_t *e)
 {
 	// Your code here
-	
 }
 
-void createRoom(lv_event_t * e)
-{
-	// Your code here
-	 lv_label_set_text(ui_LbName, ui_event_TextArea);
-	int number_room =  atoi(ui_event_TextArea);
-	int row = number_room/100;
-	int col = number_room%100;
-	
-	if (row < 7 && col < 9)
-	{
-		create_room_button(ui_GroupScroll, ui_event_TextArea, -165 + (row-1) *60 , -280 + (col- 1)*80);
-	}
-	else
-	{
-		lv_textarea_set_text(ui_TextAreaHome, "");
-	}
-}
 
-void turnOffSOS(lv_event_t * e)
-{
-	lv_obj_add_flag(ui_BtnSafe, LV_OBJ_FLAG_HIDDEN);
-}
+

@@ -22,8 +22,15 @@ extern "C" {
 #include "lvgl.h"
 #endif
 
+#include "RoomButton.h"
+extern RoomButton *roomButtons;
+
+
 #include "ui_helpers.h"
 #include "ui_events.h"
+
+#define MAX_ROWS 6
+#define MAX_COLS 8
 
 // SCREEN: ui_Home
 void ui_Home_screen_init(void);
@@ -33,44 +40,21 @@ extern lv_obj_t * ui_GroupBtn;
 extern lv_obj_t * ui_GroupScroll;
 void button_event_handler(lv_event_t * e);
 void create_room_button(lv_obj_t * parent, int room_number, int x, int y);
-// void ui_event_Btn101(lv_event_t * e);
+
+extern int roomButtonCount ;
+
+void add_room_button(lv_obj_t *btn, int id, lv_obj_t*label);
 extern lv_obj_t * ui_Btn101;
 extern lv_obj_t * ui_Lb101;
-// extern lv_obj_t * ui_Btn102;
-// extern lv_obj_t * ui_Lb102;
-// extern lv_obj_t * ui_Btn103;
-// extern lv_obj_t * ui_Lb103;
-// extern lv_obj_t * ui_Btn104;
-// extern lv_obj_t * ui_Lb104;
-// extern lv_obj_t * ui_Btn105;
-// extern lv_obj_t * ui_Lb105;
-// extern lv_obj_t * ui_Btn106;
-// extern lv_obj_t * ui_Lb106;
-// extern lv_obj_t * ui_Btn201;
-// extern lv_obj_t * ui_Lb201;
-// extern lv_obj_t * ui_Btn202;
-// extern lv_obj_t * ui_Lb202;
-// extern lv_obj_t * ui_Btn203;
-// extern lv_obj_t * ui_Lb203;
-// extern lv_obj_t * ui_Btn204;
-// extern lv_obj_t * ui_Lb204;
-// extern lv_obj_t * ui_Btn301;
-// extern lv_obj_t * ui_Lb301;
-// extern lv_obj_t * ui_Btn302;
-// extern lv_obj_t * ui_Lb302;
-// extern lv_obj_t * ui_Btn303;
-// extern lv_obj_t * ui_Lb303;
-// extern lv_obj_t * ui_Btn304;
-// extern lv_obj_t * ui_Lb304;
-// extern lv_obj_t * ui_Btn401;
-// extern lv_obj_t * ui_Lb401;
+extern bool clicked;
+extern bool SOSclicked;
 extern lv_obj_t * ui_PanelTemp;
 void ui_event_BtnAdd(lv_event_t * e);
 extern lv_obj_t * ui_BtnAdd;
 extern lv_obj_t * ui_LbAdd;
 extern lv_obj_t * ui_TextAreaHome;
 void ui_event_KeyboardHome(lv_event_t * e);
-char ui_event_TextArea(lv_event_t * e);
+char * ui_event_TextArea(lv_event_t * e);
 extern lv_obj_t * ui_KeyboardHome;
 extern lv_obj_t * ui_LbSOS;
 // SCREEN: ui_Room
