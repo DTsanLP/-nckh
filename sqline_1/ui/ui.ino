@@ -255,7 +255,6 @@ void reload_Value()
                     else
                     {
                         // lv_obj_add_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
-                        
                     }
                 }
             }
@@ -278,9 +277,6 @@ void reload_Value()
 
                 lv_label_set_text_fmt(ui_ValHumi, "%d", board.humi_data);
 
-                // char humi_data_str[6];
-                // dtostrf(myData.humi_data, 3, 1, humi_data_str);
-                // lv_label_set_text(ui_ValHumi, humi_data_str);
                 char temp_data_str[6];
                 dtostrf(board.temp_data, 4, 1, temp_data_str);
                 lv_label_set_text(ui_ValTemp, temp_data_str);
@@ -345,5 +341,5 @@ void reload_Value()
     {
         Serial.println("Error sending the data");
     }
-    delay(100);
+    delay(50);
 }

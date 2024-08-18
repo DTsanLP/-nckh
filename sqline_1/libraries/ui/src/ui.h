@@ -29,9 +29,6 @@ extern RoomButton *roomButtons;
 #include "ui_helpers.h"
 #include "ui_events.h"
 
-#define MAX_ROWS 6
-#define MAX_COLS 8
-
 // SCREEN: ui_Home
 void ui_Home_screen_init(void);
 extern lv_obj_t * ui_Home;
@@ -40,9 +37,7 @@ extern lv_obj_t * ui_GroupBtn;
 extern lv_obj_t * ui_GroupScroll;
 void button_event_handler(lv_event_t * e);
 void create_room_button(lv_obj_t * parent, int room_number, int x, int y);
-
 extern int roomButtonCount ;
-
 void add_room_button(lv_obj_t *btn, int id, lv_obj_t*label);
 extern lv_obj_t * ui_Btn101;
 extern lv_obj_t * ui_Lb101;
@@ -54,7 +49,7 @@ extern lv_obj_t * ui_BtnAdd;
 extern lv_obj_t * ui_LbAdd;
 extern lv_obj_t * ui_TextAreaHome;
 void ui_event_KeyboardHome(lv_event_t * e);
-char * ui_event_TextArea(lv_event_t * e);
+void show_warning_message();
 extern lv_obj_t * ui_KeyboardHome;
 extern lv_obj_t * ui_LbSOS;
 // SCREEN: ui_Room

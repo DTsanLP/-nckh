@@ -63,9 +63,6 @@ void ui_Home_screen_init(void)
     lv_label_set_text(ui_Lb101, "101");
     lv_obj_add_event_cb(ui_Btn101, button_event_handler, LV_EVENT_CLICKED, NULL);
 
-    // create_room_button(ui_GroupScroll, 101, -280, -165);
-
-    // for (int r = 1; r <= MAX_ROWS; r++)
     for (uint8_t r = 1; r <= 4; r++)
     {
         // for (int c = 1; c <= MAX_COLS; c++)
@@ -140,9 +137,8 @@ void ui_Home_screen_init(void)
     lv_obj_set_style_text_color(ui_LbSOS, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LbSOS, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    // lv_obj_add_event_cb(ui_Btn101, ui_event_Btn101, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_BtnAdd, ui_event_BtnAdd, LV_EVENT_ALL, NULL);
     lv_keyboard_set_textarea(ui_KeyboardHome, ui_TextAreaHome);
-    lv_obj_add_event_cb(ui_TextAreaHome, ui_event_TextArea, LV_EVENT_ALL, NULL);
+    // lv_obj_add_event_cb(ui_TextAreaHome, ui_event_TextArea, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_KeyboardHome, ui_event_KeyboardHome, LV_EVENT_ALL, NULL);
 }

@@ -12,29 +12,25 @@
 void ui_Home_screen_init(void);
 lv_obj_t *ui_Home;
 lv_obj_t *ui_LbName;
+
 lv_obj_t *ui_GroupBtn;
 lv_obj_t *ui_GroupScroll;
 void button_event_handler(lv_event_t *e);
 void create_room_button(lv_obj_t *parent, int room_number, int x, int y);
 // void ui_event_Btn101(lv_event_t * e);
-
 RoomButton *roomButtons;
-
 int roomButtonCount = 0;
-
 void add_room_button(lv_obj_t *btn, int id, lv_obj_t *label);
-
 lv_obj_t *ui_Btn101;
 lv_obj_t *ui_Lb101;
 bool clicked;
-
 lv_obj_t *ui_PanelTemp;
 void ui_event_BtnAdd(lv_event_t *e);
 lv_obj_t *ui_BtnAdd;
 lv_obj_t *ui_LbAdd;
 lv_obj_t *ui_TextAreaHome;
 void ui_event_KeyboardHome(lv_event_t *e);
-char *ui_event_TextArea(lv_event_t *e);
+void show_warning_message();
 lv_obj_t *ui_KeyboardHome;
 lv_obj_t *ui_LbSOS;
 bool SOSclicked;
@@ -107,6 +103,7 @@ void button_event_handler(lv_event_t *e)
         clicked = true;
     }
 }
+
 void create_room_button(lv_obj_t *parent, int room_number, int x, int y)
 {
     // Tạo nút
@@ -127,13 +124,12 @@ void create_room_button(lv_obj_t *parent, int room_number, int x, int y)
     lv_obj_set_width(label, LV_SIZE_CONTENT);  // 1
     lv_obj_set_height(label, LV_SIZE_CONTENT); // 1
     lv_obj_set_align(label, LV_ALIGN_CENTER);
-
     lv_label_set_text_fmt(label, "%d", room_number);
-
+    // thêm nút vào mảng
     add_room_button(btn, room_number, label);
-
     lv_obj_add_event_cb(btn, button_event_handler, LV_EVENT_CLICKED, NULL);
 }
+
 void ui_event_BtnAdd(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -145,7 +141,7 @@ void ui_event_BtnAdd(lv_event_t *e)
         _ui_flag_modify(ui_TextAreaHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
         _ui_flag_modify(ui_BtnAdd, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
         _ui_flag_modify(ui_PanelTemp, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
-        _ui_flag_modify(ui_LbSOS, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
+        lv_obj_add_flag(ui_LbSOS, LV_OBJ_FLAG_HIDDEN);
     }
 }
 void ui_event_KeyboardHome(lv_event_t *e)
@@ -154,21 +150,27 @@ void ui_event_KeyboardHome(lv_event_t *e)
     lv_obj_t *target = lv_event_get_target(e);
     if (event_code == LV_EVENT_READY)
     {
-        _ui_flag_modify(ui_TextAreaHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
-        _ui_flag_modify(ui_BtnAdd, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
-        _ui_flag_modify(ui_KeyboardHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
-
-        _ui_flag_modify(ui_PanelTemp, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
-        _ui_flag_modify(ui_LbSOS, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
-        lv_label_set_text(ui_LbName, ui_event_TextArea);
-        // const char *text = lv_textarea_get_text(ui_event_TextArea);
-        int number_room = atoi(ui_event_TextArea);
+       
+        lv_obj_t *textarea = lv_keyboard_get_textarea(ui_KeyboardHome);
+        // Lấy văn bản từ textarea
+        const char *text = lv_textarea_get_text(textarea);
+        // lv_label_set_text(ui_LbName, text);
+        int number_room = atoi(text);
         int row = number_room / 100;
         int col = number_room % 100;
 
-        if (row > 0 && row < 7 && col < 9 && col > 0)
+        if (row > 8 || col > 8)
+        {
+            lv_textarea_set_text(ui_TextAreaHome, "");
+        }
+        else if (!(row > 0 && row < 5 && col < 5 && col > 0))
         {
             create_room_button(ui_GroupScroll, number_room, -280 + (col - 1) * 80, -165 + (row - 1) * 60);
+            lv_textarea_set_text(ui_TextAreaHome, "");
+            _ui_flag_modify(ui_TextAreaHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
+            _ui_flag_modify(ui_BtnAdd, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
+            _ui_flag_modify(ui_KeyboardHome, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
+            _ui_flag_modify(ui_PanelTemp, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_TOGGLE);
         }
         else
         {
@@ -177,16 +179,6 @@ void ui_event_KeyboardHome(lv_event_t *e)
     }
 }
 
-char *ui_event_TextArea(lv_event_t *e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *obj = lv_event_get_target(e);
-    if (code == LV_EVENT_VALUE_CHANGED)
-    {
-        const char *text = lv_textarea_get_text(obj);
-        return text;
-    }
-}
 void ui_event_BtnBack(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
