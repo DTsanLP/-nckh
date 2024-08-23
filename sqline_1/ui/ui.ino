@@ -8,8 +8,9 @@
 #include <WiFi.h>
 #include <vector>
 #define BUZ_PIN 27
-
+#define MAX_PEERS 10
 uint8_t broadcastAddress[] = {0x08, 0xD1, 0xF9, 0x35, 0x1F, 0xB0};
+// uint8_t broadcastAddress[6];
 /*Don't forget to set Sketchbook location in File/Preferences to the path of your UI project (the parent foder of this INO file)*/
 // Touch Screen pins
 // ----------------------------
@@ -36,6 +37,7 @@ static lv_color_t buf[screenWidth * screenHeight / 10];
 // MESSAGE
 typedef struct struct_message
 {
+    uint8_t add[6];
     unsigned int seq;
     int mq_data;
     bool fl_data;
@@ -52,7 +54,7 @@ typedef struct control_message
     bool dcm_ctrl;
 } control_message;
 static control_message ctrlData;
-
+static uint8_t checkadd[6];
 esp_now_peer_info_t peerInfo;
 
 TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight); /* TFT instance */
@@ -120,10 +122,20 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     {
         if (board.seq == myData.seq)
         {
+            for (int i =0; i<6;i++)
+            {
+              board.add[i] = myData.add[i];
+            }
             board.temp_data = myData.temp_data;
             board.humi_data = myData.humi_data;
             board.mq_data = myData.mq_data;
             board.fl_data = myData.fl_data;
+            memcpy(peerInfo.peer_addr, board.add, 6);
+            if (esp_now_add_peer(&peerInfo) != ESP_OK)
+            {
+                Serial.println("Failed to add peer");
+                return;
+            }
             boardFound = true;
             break;
         }
@@ -134,6 +146,10 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     {
         boardsStruct.push_back(myData);
     }
+    // Serial.println(myData.add);
+    // Serial.println(myData.temp_data);
+    // Serial.println(myData.humi_data);
+    // Serial.println(myData.mq_data);
 }
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
@@ -153,16 +169,14 @@ void setup()
         Serial.println("Error initializing ESP-NOW");
         return;
     }
+
     esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
     esp_now_register_send_cb(OnDataSent);
-    memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+
+    // memcpy(peerInfo.peer_addr, broadcastAddress, 6);
     peerInfo.channel = 0;
     peerInfo.encrypt = false;
-    if (esp_now_add_peer(&peerInfo) != ESP_OK)
-    {
-        Serial.println("Failed to add peer");
-        return;
-    }
+
     String LVGL_Arduino = "Hello Arduino! ";
     LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
 
@@ -266,12 +280,17 @@ void reload_Value()
     /// Show
     if (clicked == true)
     {
+
         char *text_room = lv_label_get_text(ui_LbRoom);
         unsigned int check_room = atoi(text_room);
         for (auto &board : boardsStruct)
         {
             if (check_room == board.seq)
             {
+                for (int i = 0; i<6; i++)
+                {
+                  checkadd[i] = board.add[i];
+                }
                 lv_label_set_text_fmt(ui_ValSmoke, "%d", board.mq_data);
                 lv_label_set_text(ui_ValFire, board.fl_data == 0 ? "YES" : "NO");
 
@@ -309,9 +328,10 @@ void reload_Value()
                 break;
             }
         }
+
         if (SOSclicked == true)
         {
-          
+
             ctrlData.seq = check_room;
             ctrlData.buz_ctrl = false;
             ctrlData.dcm_ctrl = false;
@@ -324,8 +344,11 @@ void reload_Value()
             ctrlData.dcm_ctrl = true;
         }
     }
-
-    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&ctrlData, sizeof(ctrlData));
+    Serial.println(ctrlData.buz_ctrl);
+    Serial.println("=========");
+    // Serial.println(checkadd);
+    // memcpy(broadcastAddress, checkadd, 6);
+    esp_err_t result = esp_now_send(checkadd, (uint8_t *)&ctrlData, sizeof(ctrlData));
     if (result == ESP_OK)
     {
         Serial.println(ctrlData.buz_ctrl);
@@ -341,5 +364,6 @@ void reload_Value()
     {
         Serial.println("Error sending the data");
     }
+
     delay(50);
 }
