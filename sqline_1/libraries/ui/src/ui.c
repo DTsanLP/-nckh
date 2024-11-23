@@ -34,6 +34,7 @@ void show_warning_message();
 lv_obj_t *ui_KeyboardHome;
 lv_obj_t *ui_LbSOS;
 bool SOSclicked;
+bool Batclicked;
 // SCREEN: ui_Room
 void ui_Room_screen_init(void);
 lv_obj_t *ui_Room;
@@ -60,6 +61,7 @@ lv_obj_t *ui_BtnSafe;
 lv_obj_t *ui_LbSafe;
 lv_obj_t *ui_Battery;
 lv_obj_t *ui_LbBat;
+void ui_event_Battery(lv_event_t *e);
 lv_obj_t *ui____initial_actions0;
 
 ///////////////////// TEST LVGL SETTINGS ////////////////////
@@ -217,7 +219,15 @@ void ui_event_BtnSafe(lv_event_t *e)
         SOSclicked = true;
     }
 }
-
+void ui_event_Battery(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t *target = lv_event_get_target(e);
+    if (event_code == LV_EVENT_CLICKED)
+    {
+        Batclicked = true;
+    }
+}
 ///////////////////// SCREENS ////////////////////
 
 void ui_init(void)

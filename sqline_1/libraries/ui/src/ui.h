@@ -43,13 +43,14 @@ extern lv_obj_t * ui_Btn101;
 extern lv_obj_t * ui_Lb101;
 extern bool clicked;
 extern bool SOSclicked;
+extern bool Batclicked;
 extern lv_obj_t * ui_PanelTemp;
 void ui_event_BtnAdd(lv_event_t * e);
 extern lv_obj_t * ui_BtnAdd;
 extern lv_obj_t * ui_LbAdd;
 extern lv_obj_t * ui_TextAreaHome;
 void ui_event_KeyboardHome(lv_event_t * e);
-void show_warning_message();
+// void show_warning_message();
 extern lv_obj_t * ui_KeyboardHome;
 extern lv_obj_t * ui_LbSOS;
 // SCREEN: ui_Room
@@ -78,6 +79,7 @@ extern lv_obj_t * ui_BtnSafe;
 extern lv_obj_t * ui_LbSafe;
 extern lv_obj_t * ui_Battery;
 extern lv_obj_t * ui_LbBat;
+void ui_event_Battery(lv_event_t *e);
 extern lv_obj_t * ui____initial_actions0;
 
 

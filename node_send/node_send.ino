@@ -37,7 +37,7 @@ char macAddressStr[30];
 uint8_t add_mac[6];
 const int MQ = 36;
 const int FL = 26;
-const int dcm = 25;
+const int dcm = 23;
 const int buzz = 12;
 
 const int freq = 5000;
@@ -151,11 +151,15 @@ void readSensorShow() {
   // Serial.print("Humi: " );
   // Serial.println(humi_value);
   Serial.println("-------");
-  if (fl_value == 0 || mq_value >= 1000 || temp_value >= 45) {
+  if (fl_value == 0 || mq_value >= 500 || temp_value >= 45) {
     digitalWrite(buzz, HIGH);
   }
   if (ctrlData.buz_ctrl == false) {
     digitalWrite(buzz, LOW);
+    digitalWrite(dcm, LOW);
+  }
+  if (ctrlData.dcm_ctrl == true){
+    digitalWrite(dcm, HIGH);
   }
   
 }
